@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uglylogger"  # Required
+version = "0.1.0"  # Required
+description = "An ugly, slow Logger class for python"  # Optional
+readme = "README.md" # Optional
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+keywords = ["python", "python3", "log", "logger", "oop","pretty", "ugly"]  # Optional
+authors = [
+  {name = "Sevket Sureyya Caba", email = "sevketcaba@gmail.com" } # Optional
+]
+maintainers = [
+  {name = "Sevket Sureyya Caba", email = "sevketcaba@gmail.com" } # Optional
+]
+classifiers = [  # Optional
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [ # Optional
+]
+[project.optional-dependencies] # Optional
+dev = ["black", "flake8", "mypy"]
+test = ["pytest", "coverage"]
+
+[project.urls]  # Optional
+"Homepage" = "https://github.com/sevketcaba/uglylogger"
+"Bug Reports" = "https://github.com/sevketcaba/uglylogger/issues"
+# "Funding" = "https://donate.pypi.org"
+# "Say Thanks!" = "http://saythanks.io/to/example"
+"Source" = "https://github.com/sevketcaba/uglylogger/"
+
+[project.scripts]  # Optional
+
+[tool.setuptools]
+
+[tool.black]
+line-length = 79
+
+[tool.pytest.ini_options]
+addopts = [
+  "--import-mode=importlib",
+]
+pythonpath = "src"
