@@ -408,6 +408,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         level: LogLevel = LogLevel.DEBUG,
+        output: LogOutput = LogOutput.ALL,
     ):
         """Logs both to the file and to the console
 
@@ -416,9 +417,12 @@ class Logger:
             color (LogColor | None, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             level (LogLevel, optional): Defaults to LogLevel.DEBUG.
+            output (LogOutput, optional): Defaults to LogOutput.ALL.
         """
-        self.console(msg, color, level)
-        self.file(msg, level)
+        if LogOutput.CONSOLE in output:
+            self.console(msg, color, level)
+        if LogOutput.FILE in output:
+            self.file(msg, level)
 
     def debug(
         self,
