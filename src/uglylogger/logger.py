@@ -327,6 +327,39 @@ class Logger:
             )
         return self._format(msg, level)
 
+    def console_oneline(
+        self,
+        msg: typing.Any,
+        color: LogColor = LogColor.BLACK,
+        console_width: int = 100,
+    ):
+        if console_width <= 0:
+            return
+        msg_str = self._msg_to_str(msg)
+        if msg_str == "":
+            print("\r" + " " * console_width, end="\r", flush=True)
+            return
+
+        msg_len = len(msg_str)
+        msg_to_print = ""
+        if msg_len > console_width:
+            msg_to_print = msg_str[: console_width - 3] + "..."
+        else:
+            msg_to_print = msg_str + " " * (console_width - msg_len)
+
+        if self._colored == LogColorMode.COLORED:
+            print(
+                f"\r{self._color_str(color)}{msg_to_print}\033[0m",
+                end="",
+                flush=True,
+            )
+        else:
+            print(
+                f"\r{msg_to_print}",
+                end="",
+                flush=True,
+            )
+
     def console(
         self,
         msg: typing.Any,

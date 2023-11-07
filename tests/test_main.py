@@ -1,4 +1,6 @@
+import io
 import unittest
+import unittest.mock
 import os
 from inspect import currentframe, getframeinfo
 from uglylogger.logger import Logger, LogFormatBlock, LogColorMode
@@ -24,7 +26,8 @@ class TestMain(unittest.TestCase):
     ) -> Logger:
         logger = Logger(name, file, permanent, append, color_mode)
         self._loggers.append(logger)
-        self._files.append(file)
+        if file is not None:
+            self._files.append(file)
         return logger
 
     def _delete_logger(self, logger: Logger | None, delete_file: bool = True):
@@ -56,6 +59,80 @@ class TestMain(unittest.TestCase):
         if line_idx >= 0 and line_idx < len(lines):
             return lines[line_idx].rstrip("\n")
         return None  # pragma: no cover
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline(self, mock):
+        logger = self._create_logger("log", color_mode=LogColorMode.MONO)
+
+        logger.console_oneline(1)
+
+        received_val = mock.getvalue().strip()
+        expected_val = ("\r1" + " " * 99).strip()
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline_negative_width(self, mock):
+        logger = self._create_logger("log", color_mode=LogColorMode.MONO)
+
+        logger.console_oneline(1, console_width=-1)
+
+        received_val = mock.getvalue().strip()
+        expected_val = ""
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline_empty_msg(self, mock):
+        logger = self._create_logger("log", color_mode=LogColorMode.MONO)
+
+        logger.console_oneline("")
+
+        received_val = mock.getvalue().strip()
+        expected_val = ""
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline_msg_longer_than_console_width(self, mock):
+        logger = self._create_logger("log", color_mode=LogColorMode.MONO)
+
+        logger.console_oneline("1234567890", console_width=5)
+
+        received_val = mock.getvalue().strip()
+        expected_val = "12..."
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline_msg_longer_equal_console_width(self, mock):
+        logger = self._create_logger("log", color_mode=LogColorMode.MONO)
+
+        logger.console_oneline("12345", console_width=5)
+
+        received_val = mock.getvalue().strip()
+        expected_val = "12345"
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
+
+    @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
+    def test_console_oneline_msg_longer_equal_console_width_colored(
+        self, mock
+    ):
+        logger = self._create_logger("log")
+
+        logger.console_oneline("12345", console_width=5)
+
+        received_val = mock.getvalue().strip()
+        expected_val = "\x1b[1;30m12345\x1b[0m"
+        self.assertEqual(expected_val, received_val)
+
+        self._delete_logger(logger)
 
     def test_log_file_creation(self):
         file_name = "test_log_file_creation.log"
