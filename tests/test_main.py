@@ -3,7 +3,7 @@ import unittest
 import unittest.mock
 import os
 from inspect import currentframe, getframeinfo
-from uglylogger.logger import Logger, LogFormatBlock, LogColorMode
+from uglylogger import Logger, LogFormatBlock, LogColorMode
 
 
 class TestMain(unittest.TestCase):
@@ -137,7 +137,7 @@ class TestMain(unittest.TestCase):
     def test_log_file_creation(self):
         file_name = "test_log_file_creation.log"
         logger = self._create_logger("test_log_file_creation", file_name)
-        logger.set_format(LogFormatBlock.MESSAGE)
+        logger.set_format([LogFormatBlock.MESSAGE])
         logger.debug("DEBUG LOG HERE")
         self.assertEqual(
             True, os.path.exists(file_name), f"{file_name} file not found"
@@ -147,7 +147,7 @@ class TestMain(unittest.TestCase):
     def test_log_file_contains_content(self):
         file_name = "test_log_file_contains_content.log"
         logger = self._create_logger("debug_logger", file_name)
-        logger.set_format(LogFormatBlock.MESSAGE)
+        logger.set_format([LogFormatBlock.MESSAGE])
         log_line = "DEBUG LOG HERE"
         logger.debug(log_line)
         last_line_in_file = self._read_line_of_log_file(file_name, -1)
@@ -174,7 +174,7 @@ class TestMain(unittest.TestCase):
     def test_levels(self):
         file = "test_levels.log"
         logger = self._create_logger("test_levels", file)
-        logger.set_format(LogFormatBlock.MESSAGE)
+        logger.set_format([LogFormatBlock.MESSAGE])
         # debug
         logger.debug("DEBUG")
         line = self._read_line_of_log_file(logger._file)

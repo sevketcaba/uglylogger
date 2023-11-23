@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uglylogger"  # Required
-version = "0.2.0"  # Required
+version = "0.3.0"  # Required
 description = "An ugly, slow Logger class for python"  # Optional
 readme = "README.md" # Optional
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 keywords = ["python", "python3", "log", "logger", "oop","pretty", "ugly"]  # Optional
 authors = [
