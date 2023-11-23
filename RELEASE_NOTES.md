@@ -1,3 +1,6 @@
+# v0.5.0
+- **[FEATURE]** Added PEP-561 compliance (py.typed)
+
 # v0.4.0
 - **[BUGFIX]** Fixed publish with the lowest supported python version
 
