@@ -1,4 +1,7 @@
-# v0.3.0  
+# v0.4.0
+- **[BUGFIX]** Fixed publish with the lowest supported python version
+
+# v0.3.0 [NOT PUBLISHED]
 - **[FEATURE]** Added Python 3.10 support
 - **[FEATURE]** Added Python 3.12 support
 - **[DOC]** Added Release Notes
