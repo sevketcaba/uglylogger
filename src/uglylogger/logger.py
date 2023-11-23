@@ -256,9 +256,6 @@ class Logger:
     def _msg_to_str(self, msg: typing.Any) -> str:
         return str(msg, "utf-8") if type(msg) is bytes else str(msg)
 
-    def set_format(self, fmt: list = []):
-        self._format_arr = fmt
-
     def _get_file_line_func(self):
         stack = inspect.stack()
         this_fil = str(stack[1][1])
@@ -326,6 +323,9 @@ class Logger:
                 self._color_str(color) + self._format(msg, level) + "\033[0m"
             )
         return self._format(msg, level)
+
+    def set_format(self, fmt: list = []):
+        self._format_arr = fmt
 
     def console_oneline(
         self,
