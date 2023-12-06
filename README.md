@@ -145,3 +145,32 @@ logger.set_format([
 logger.console("Hello World!")
 # Output : [DEBUG] Hello World!
 ```
+
+
+### <a name="function_move"></a> Move the log file to another location
+```
+logger.move(new_file: str, option: LogMoveOption)
+# Output : Hello World!
+```
+### Available LogMoveOption
+    - MOVE_AND_APPEND  
+       Moves the log file to the destination
+       Deletes if there's already a file in the destination
+       Appends to the moved file
+       Old file is obviously deleted
+    - COPY_AND_APPEND  
+       Copies the log file to the destination
+       Deletes if there's already a file in the destination
+       Appends to the moved file
+       Old file is obviously remains    
+    - KEEP_AND_APPEND  
+       Keeps the old log file
+       Appends if there's already a file in the destination
+       Creates a new file if not
+    - KEEP_AND_INIT  
+       Keeps the old log file
+       Creates a new file in the destination    
+    - DELETE_AND_INIT  
+       Deletes the old log file
+       Creates a new file in the destination
+       

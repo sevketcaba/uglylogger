@@ -3,7 +3,8 @@ import unittest
 import unittest.mock
 import os
 from inspect import currentframe, getframeinfo
-from uglylogger import Logger, LogFormatBlock, LogColorMode
+from uglylogger import Logger, LogFormatBlock, LogColorMode, LogMoveOption
+from parameterized import parameterized  # type: ignore
 
 
 class TestMain(unittest.TestCase):
@@ -12,9 +13,12 @@ class TestMain(unittest.TestCase):
 
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
+        if not os.path.exists("test_logs"):
+            os.mkdir("test_logs")
 
     def __del__(self):
-        pass
+        if os.path.exists("test_logs"):
+            os.rmdir("test_logs")
 
     def _create_logger(
         self,
@@ -34,7 +38,8 @@ class TestMain(unittest.TestCase):
         if logger is None:
             return  # pragma: no cover
         file = logger._file
-        self._loggers.remove(logger)
+        if logger in self._loggers:
+            self._loggers.remove(logger)
         logger.release()  # don't care about permanent state
         if delete_file:
             self._delete_file(file)
@@ -43,13 +48,16 @@ class TestMain(unittest.TestCase):
     def _delete_file(self, file: str | None) -> None:
         if file is None:
             return  # pragma: no cover
-        self._files.remove(file)
+        if file in self._files:
+            self._files.remove(file)
         if os.path.exists(file):
             os.remove(file)
 
     def _read_line_of_log_file(
-        self, file: str, line_idx: int = -1
+        self, file: str | None, line_idx: int = -1
     ) -> str | None:
+        if file is None:
+            return None
         lines: list[str] = []
         with open(file, "r") as f:
             for line in f:
@@ -203,6 +211,10 @@ class TestMain(unittest.TestCase):
         file_name = name + ".log"
         return self._create_logger(logger_name, file_name)
 
+    def test_testfile_readline_from_none(self):
+        line = self._read_line_of_log_file(None)
+        self.assertIsNone(line)
+
     def test_format_name(self):
         logger = self._create_test_format_logger("test_format_name")
 
@@ -343,6 +355,140 @@ class TestMain(unittest.TestCase):
         self.assertEqual(line, "MONOLOG")
 
         self._delete_logger(logger)
+
+    @parameterized.expand([(True), (False)])
+    def test_release_and_recreate(self, append: bool):
+        logger_first = self._create_logger("log_first", "log_first.log")
+        logger_first.set_format([LogFormatBlock.MESSAGE])
+        logger_first.log("First")
+        logger_first.release()
+
+        logger_second = self._create_logger(
+            "log_second", "log_first.log", append=append
+        )
+        logger_second.set_format([LogFormatBlock.MESSAGE])
+        logger_second.log("Second")
+
+        line = self._read_line_of_log_file(logger_second._file, 0)
+
+        if append:
+            self.assertEqual(line, "First")
+            line = self._read_line_of_log_file(logger_second._file, 1)
+            self.assertEqual(line, "Second")
+
+        self.assertEqual(line, "Second")
+
+        self._delete_logger(logger_first)
+        self._delete_logger(logger_second)
+
+    @parameterized.expand(
+        [
+            (LogMoveOption.MOVE_AND_APPEND, True),
+            (LogMoveOption.MOVE_AND_APPEND, False),
+            (LogMoveOption.COPY_AND_APPEND, True),
+            (LogMoveOption.COPY_AND_APPEND, False),
+            (LogMoveOption.KEEP_AND_APPEND, True),
+            (LogMoveOption.KEEP_AND_APPEND, False),
+            (LogMoveOption.KEEP_AND_INIT, True),
+            (LogMoveOption.KEEP_AND_INIT, False),
+            (LogMoveOption.DELETE_AND_INIT, True),
+            (LogMoveOption.DELETE_AND_INIT, False),
+        ]
+    )
+    def test_move_file(self, option: LogMoveOption, target_has_file: bool):
+        old_file = "log_to_move.log"
+        new_file = "log_moved.log"
+
+        if target_has_file:
+            # create a file at the destination
+            tmp_logger = self._create_logger("tmp", new_file)
+            tmp_logger.set_format([LogFormatBlock.MESSAGE])
+            tmp_logger.log("Already There")
+            # delete logger but don't delete file
+            self._delete_logger(tmp_logger, False)
+
+        logger = self._create_logger("logger", old_file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.log("Before Move")
+        self.assertTrue(os.path.exists(old_file))
+
+        line = self._read_line_of_log_file(logger._file, 0)
+        self.assertEqual(line, "Before Move")
+
+        logger.move(new_file, option)
+
+        match option:
+            case LogMoveOption.MOVE_AND_APPEND:
+                # moves the file and append to it
+                # old file should be deleted
+                self.assertFalse(os.path.exists(old_file))
+                # new file should be created
+                self.assertTrue(os.path.exists(new_file))
+                # insert a new line
+                logger.log("After Move")
+                # both lines should exist in the new file
+                line = self._read_line_of_log_file(logger._file, 0)
+                self.assertEqual(line, "Before Move")
+                line = self._read_line_of_log_file(logger._file, 1)
+                self.assertEqual(line, "After Move")
+            case LogMoveOption.COPY_AND_APPEND:
+                # copies the file and append to it
+                # old file should exist
+                self.assertTrue(os.path.exists(old_file))
+                # new file should be created
+                self.assertTrue(os.path.exists(new_file))
+                # insert a new line
+                logger.log("After Move")
+                # both lines should exist in the new file
+                line = self._read_line_of_log_file(logger._file, 0)
+                self.assertEqual(line, "Before Move")
+                line = self._read_line_of_log_file(logger._file, 1)
+                self.assertEqual(line, "After Move")
+            case LogMoveOption.KEEP_AND_APPEND:
+                # keeps the file but append to
+                #   whatever exists in the new location
+                # new file should exist even before creation
+                self.assertTrue(os.path.exists(new_file))
+                # old file should exist
+                self.assertTrue(os.path.exists(old_file))
+                # new file should still exist
+                self.assertTrue(os.path.exists(new_file))
+                # insert a new line
+                logger.log("After Move")
+
+                line = self._read_line_of_log_file(logger._file, 0)
+                if target_has_file:
+                    self.assertEqual(line, "Already There")
+                    line = self._read_line_of_log_file(logger._file, 1)
+                    self.assertEqual(line, "After Move")
+                else:
+                    self.assertEqual(line, "After Move")
+            case LogMoveOption.KEEP_AND_INIT:
+                # keeps the file and create a new file in the new location
+                self.assertTrue(os.path.exists(old_file))
+                self.assertTrue(os.path.exists(new_file))
+                logger.log("After Move")
+                line = self._read_line_of_log_file(logger._file, 0)
+                self.assertEqual(line, "After Move")
+            case LogMoveOption.DELETE_AND_INIT:
+                # deletes the file and create a new file in the new location
+                self.assertFalse(os.path.exists(old_file))
+                self.assertTrue(os.path.exists(new_file))
+                logger.log("After Move")
+                line = self._read_line_of_log_file(logger._file, 0)
+                self.assertEqual(line, "After Move")
+
+        self._delete_logger(logger)
+        self._delete_file(old_file)
+        self._delete_file(new_file)
+
+    def test_move_none_file(self):
+        logger = self._create_logger("logger", None)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.log("Before Move")
+
+        logger.move("new_log_file.log")
+        self.assertFalse(os.path.exists("new_log_file.log"))
 
 
 if __name__ == "__main__":
