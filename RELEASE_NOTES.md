@@ -1,3 +1,9 @@
+# v0.6.0
+- **[FEATURE]** Added move() functionality [see: Function move()](README.md#function_move)  
+- **[BUG_FIX]** Fixed a bug where release does not actually releases the resources
+- **[CI_FIX]** Added missing pytest which was removed with the coverage
+- **[BUMP]** Bumped mypy to v1.7
+
 # v0.5.0
 - **[FEATURE]** Added PEP-561 compliance (py.typed)
 
