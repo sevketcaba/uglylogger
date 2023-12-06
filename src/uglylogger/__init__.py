@@ -5,4 +5,5 @@ from .logger import (
     LogLevel,
     LogFormatBlock,
     Logger,
+    LogMoveOption,
 )

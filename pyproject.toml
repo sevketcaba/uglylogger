@@ -26,6 +26,7 @@ classifiers = [  # Optional
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [ # Optional
+"parameterized"
 ]
 [project.optional-dependencies] # Optional
 dev = ["black", "flake8", "mypy"]

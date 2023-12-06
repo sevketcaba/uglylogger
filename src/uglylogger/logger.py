@@ -6,6 +6,8 @@ from datetime import datetime
 import inspect
 import os
 import typing
+import shutil
+from typing import Tuple, Callable
 
 
 class LogColorMode(IntEnum):
@@ -102,6 +104,40 @@ class LogFormatBlock(Flag):
     FUNCTION = auto()
 
 
+class LogMoveOption(IntEnum):
+    """LogMoveOption"""
+
+    """Moves the log file to the destination
+       Deletes if there's already a file in the destination
+       Appends to the moved file
+       Old file is obviously deleted
+    """
+    MOVE_AND_APPEND = (1,)
+
+    """Copies the log file to the destination
+       Deletes if there's already a file in the destination
+       Appends to the moved file
+       Old file is obviously remains
+    """
+    COPY_AND_APPEND = (2,)
+
+    """Keeps the old log file
+       Appends if there's already a file in the destination
+       Creates a new file if not
+    """
+    KEEP_AND_APPEND = (3,)
+
+    """Keeps the old log file
+       Creates a new file in the destination
+    """
+    KEEP_AND_INIT = (4,)
+
+    """Deletes the old log file
+       Creates a new file in the destination
+    """
+    DELETE_AND_INIT = (5,)
+
+
 class Logger:
     """The infamous ugly logger class"""
 
@@ -158,8 +194,24 @@ class Logger:
         Logger.DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
         self._name = name
+        self._init(file, permanent, append, color_mode)
 
-        self._logger = logging.getLogger(name)
+    def __del__(self) -> None:
+        """Destructor
+
+        Releases the resources like handlers if logger is not permanent
+        """
+        if not self._permanent:
+            self.release()
+
+    def _init(
+        self,
+        file: str | None = None,
+        permanent: bool = False,
+        append: bool = True,
+        color_mode: LogColorMode = LogColorMode.COLORED,
+    ) -> None:
+        self._logger = logging.getLogger(self._name)
         handlers = self._logger.handlers
         if len(handlers) > 0:
             # Load attributes from logger
@@ -197,26 +249,27 @@ class Logger:
             self._file_handler.setLevel(logging.DEBUG)
             self._logger.addHandler(self._file_handler)
 
-    def __del__(self):
-        """Destructor
-
-        Releases the resources like handlers if logger is not permanent
-        """
-        if not self._permanent:
-            self.release()
-
-    def release(self):
+    def release(self) -> None:
         """Releases the resources of the logger, like handlers etc."""
         if self._console_handler is not None:
             self._console_handler.close()
-            del self._console_handler
+            if self._logger is not None:
+                self._logger.removeHandler(self._console_handler)
+            # del self._console_handler
             self._console_handler = None
         if self._file_handler is not None:
             self._file_handler.close()
-            del self._file_handler
+            if self._logger is not None:
+                self._logger.removeHandler(self._file_handler)
+            # del self._file_handler
             self._file_handler = None
         del self._logger
         self._logger = None
+
+        self._file = None
+        self._color_mode = LogColorMode.COLORED
+        self._permanent = False
+
         if self._name in logging.Logger.manager.loggerDict:
             del logging.Logger.manager.loggerDict[self._name]
 
@@ -232,7 +285,7 @@ class Logger:
         """
         return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
-    def set_color_mode(self, mode: LogColorMode):
+    def set_color_mode(self, mode: LogColorMode) -> None:
         """Sets the color mode
 
         Args:
@@ -240,8 +293,10 @@ class Logger:
         """
         self._colored = mode == LogColorMode.COLORED
 
-    def _build_handler_filter(self, handler: str):
-        def handler_filter(record: LogRecord):
+    def _build_handler_filter(
+        self, handler: str
+    ) -> Callable[[LogRecord], bool]:
+        def handler_filter(record: LogRecord) -> bool:
             if hasattr(record, "block"):
                 if record.block == handler:
                     return False
@@ -256,7 +311,7 @@ class Logger:
     def _msg_to_str(self, msg: typing.Any) -> str:
         return str(msg, "utf-8") if type(msg) is bytes else str(msg)
 
-    def _get_file_line_func(self):
+    def _get_file_line_func(self) -> Tuple[str | None, str | None, int | None]:
         stack = inspect.stack()
         this_fil = str(stack[1][1])
         fil = None
@@ -278,7 +333,7 @@ class Logger:
 
         return (None, None, None)  # pragma: no cover
 
-    def _format(self, msg: typing.Any, level: LogLevel):
+    def _format(self, msg: typing.Any, level: LogLevel) -> str:
         formatted = ""
         fil = None
         fun = None
@@ -317,14 +372,14 @@ class Logger:
 
     def _colored_format(
         self, msg: typing.Any, color: LogColor, level: LogLevel
-    ):
+    ) -> str:
         if self._colored:
             return (
                 self._color_str(color) + self._format(msg, level) + "\033[0m"
             )
         return self._format(msg, level)
 
-    def set_format(self, fmt: list = []):
+    def set_format(self, fmt: list = []) -> None:
         self._format_arr = fmt
 
     def console_oneline(
@@ -332,7 +387,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor = LogColor.BLACK,
         console_width: int = 100,
-    ):
+    ) -> None:
         if console_width <= 0:
             return
         msg_str = self._msg_to_str(msg)
@@ -365,7 +420,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         level: LogLevel = LogLevel.DEBUG,
-    ):
+    ) -> None:
         if self._logger is None:
             return  # pragma: no cover
         match level:
@@ -442,7 +497,7 @@ class Logger:
         color: LogColor | None = None,
         level: LogLevel = LogLevel.DEBUG,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs both to the file and to the console
 
         Args:
@@ -462,7 +517,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs as debug
 
         Args:
@@ -482,7 +537,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs as info
 
         Args:
@@ -502,7 +557,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs as warning
 
         Args:
@@ -522,7 +577,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs as error
 
         Args:
@@ -542,7 +597,7 @@ class Logger:
         msg: typing.Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
-    ):
+    ) -> None:
         """Logs as critical
 
         Args:
@@ -556,3 +611,70 @@ class Logger:
             self.console(msg, color, LogLevel.CRITICAL)
         if self._file_handler is not None and LogOutput.FILE in output:
             self.file(msg, LogLevel.CRITICAL)
+
+    def move(
+        self,
+        new_file: str,
+        option: LogMoveOption = LogMoveOption.MOVE_AND_APPEND,
+    ) -> None:
+        """Moves the log file to a new destination
+
+        Args:
+            new_file (str): New Log File
+            option (LogMoveOption): how to behave, Defaults to MOVE_AND_APPEND
+                otherwise uses color by the LogLevel. Defaults to None.
+        """
+
+        if self._file is None:
+            return
+
+        permanent = self._permanent
+        color_mode = self._color_mode
+        old_file = self._file
+        self.release()
+
+        new_file_abs = os.path.abspath(new_file)
+        # new_dir = os.path.dirname(new_file_abs)
+        # if not os.path.exists(new_dir):
+        #     os.makedirs(new_dir)
+
+        append: bool = False
+        match option:
+            case LogMoveOption.MOVE_AND_APPEND:
+                # delete if there's a file in the destionation
+                if os.path.exists(new_file_abs):
+                    os.remove(new_file_abs)
+                # move the file to the destination
+                shutil.move(old_file, new_file_abs)
+                # append to the new file
+                append = True
+            case LogMoveOption.COPY_AND_APPEND:
+                # delete if there's a file in the destionation
+                if os.path.exists(new_file_abs):
+                    os.remove(new_file_abs)
+                # copy the file to the destination
+                shutil.copy(old_file, new_file_abs)
+                # append to the new file
+                append = True
+            case LogMoveOption.KEEP_AND_APPEND:
+                # don't delete the old file
+                # don't delete if there's a file in the destionation
+                # append to the new/existing file
+                append = True
+            case LogMoveOption.DELETE_AND_INIT:
+                # delete the old file
+                os.remove(old_file)
+                # delete if there's a file in the destionation
+                if os.path.exists(new_file_abs):
+                    os.remove(new_file_abs)
+                # don't append to the new file
+                append = False
+            case LogMoveOption.KEEP_AND_INIT:
+                # don't delete the old file
+                # delete if there's a file in the destionation
+                if os.path.exists(new_file_abs):
+                    os.remove(new_file_abs)
+                # don't append to the new file
+                append = False
+
+        self._init(new_file_abs, permanent, append, color_mode)
