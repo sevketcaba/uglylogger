@@ -28,3 +28,8 @@ jobs:
           python -m pip install -U tox 
       - name: Test
         run: python -m tox -c tox-ci.ini
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
