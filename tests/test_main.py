@@ -2,9 +2,17 @@ import io
 import unittest
 import unittest.mock
 import os
-from inspect import currentframe, getframeinfo
-from uglylogger import Logger, LogFormatBlock, LogColorMode, LogMoveOption
+from inspect import currentframe, getframeinfo, Traceback
+from uglylogger import (
+    Logger,
+    LogFormatBlock,
+    LogColorMode,
+    LogMoveOption,
+    LogLevel,
+    LogColor,
+)
 from parameterized import parameterized  # type: ignore
+from types import FrameType
 
 
 class TestMain(unittest.TestCase):
@@ -16,7 +24,7 @@ class TestMain(unittest.TestCase):
         if not os.path.exists("test_logs"):
             os.mkdir("test_logs")
 
-    def __del__(self):
+    def __del__(self) -> None:
         if os.path.exists("test_logs"):
             os.rmdir("test_logs")
 
@@ -34,7 +42,9 @@ class TestMain(unittest.TestCase):
             self._files.append(file)
         return logger
 
-    def _delete_logger(self, logger: Logger | None, delete_file: bool = True):
+    def _delete_logger(
+        self, logger: Logger | None, delete_file: bool = True
+    ) -> None:
         if logger is None:
             return  # pragma: no cover
         file = logger._file
@@ -69,7 +79,7 @@ class TestMain(unittest.TestCase):
         return None  # pragma: no cover
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
-    def test_console_oneline(self, mock):
+    def test_console_oneline(self, mock) -> None:
         logger = self._create_logger("log", color_mode=LogColorMode.MONO)
 
         logger.console_oneline(1)
@@ -81,7 +91,7 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger)
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
-    def test_console_oneline_negative_width(self, mock):
+    def test_console_oneline_negative_width(self, mock) -> None:
         logger = self._create_logger("log", color_mode=LogColorMode.MONO)
 
         logger.console_oneline(1, console_width=-1)
@@ -93,7 +103,7 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger)
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
-    def test_console_oneline_empty_msg(self, mock):
+    def test_console_oneline_empty_msg(self, mock) -> None:
         logger = self._create_logger("log", color_mode=LogColorMode.MONO)
 
         logger.console_oneline("")
@@ -105,7 +115,7 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger)
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
-    def test_console_oneline_msg_longer_than_console_width(self, mock):
+    def test_console_oneline_msg_longer_than_console_width(self, mock) -> None:
         logger = self._create_logger("log", color_mode=LogColorMode.MONO)
 
         logger.console_oneline("1234567890", console_width=5)
@@ -117,7 +127,9 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger)
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
-    def test_console_oneline_msg_longer_equal_console_width(self, mock):
+    def test_console_oneline_msg_longer_equal_console_width(
+        self, mock
+    ) -> None:
         logger = self._create_logger("log", color_mode=LogColorMode.MONO)
 
         logger.console_oneline("12345", console_width=5)
@@ -131,7 +143,7 @@ class TestMain(unittest.TestCase):
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
     def test_console_oneline_msg_longer_equal_console_width_colored(
         self, mock
-    ):
+    ) -> None:
         logger = self._create_logger("log")
 
         logger.console_oneline("12345", console_width=5)
@@ -142,7 +154,7 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_log_file_creation(self):
+    def test_log_file_creation(self) -> None:
         file_name = "test_log_file_creation.log"
         logger = self._create_logger("test_log_file_creation", file_name)
         logger.set_format([LogFormatBlock.MESSAGE])
@@ -152,7 +164,7 @@ class TestMain(unittest.TestCase):
         )
         self._delete_logger(logger, True)
 
-    def test_log_file_contains_content(self):
+    def test_log_file_contains_content(self) -> None:
         file_name = "test_log_file_contains_content.log"
         logger = self._create_logger("debug_logger", file_name)
         logger.set_format([LogFormatBlock.MESSAGE])
@@ -165,7 +177,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(last_line_in_file, log_line, last_line_in_file)
         self._delete_logger(logger, True)
 
-    def test_logger_reinstantiate_permanent(self):
+    def test_logger_reinstantiate_permanent(self) -> None:
         logger_first = self._create_logger(
             "debug_logger", "test_logger_reinstantiate_permanent.log", True
         )
@@ -179,7 +191,7 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger_first, False)
         self._delete_logger(logger_second, True)
 
-    def test_levels(self):
+    def test_level_default(self) -> None:
         file = "test_levels.log"
         logger = self._create_logger("test_levels", file)
         logger.set_format([LogFormatBlock.MESSAGE])
@@ -206,16 +218,177 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger, True)
 
-    def _create_test_format_logger(self, name):
+    def test_level_debug(self) -> None:
+        file = "test_level_debug.log"
+        logger = self._create_logger("test_level_debug", file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.set_log_level(LogLevel.DEBUG)
+
+        # debug
+        logger.debug("DEBUG")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("DEBUG", line)
+        # info
+        logger.info("INFO")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("INFO", line)
+        # warning
+        logger.warning("WARNING")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("WARNING", line)
+        # error
+        logger.error("ERROR")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("ERROR", line)
+        # critical
+        logger.critical("CRITICAL")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("CRITICAL", line)
+
+        self._delete_logger(logger, True)
+
+    def test_level_info(self) -> None:
+        file = "test_level_info.log"
+        logger = self._create_logger("test_level_info", file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.set_log_level(LogLevel.INFO)
+
+        # debug
+        logger.debug("DEBUG")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("DEBUG", line)
+        # info
+        logger.info("INFO")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("INFO", line)
+        # warning
+        logger.warning("WARNING")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("WARNING", line)
+        # error
+        logger.error("ERROR")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("ERROR", line)
+        # critical
+        logger.critical("CRITICAL")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("CRITICAL", line)
+
+        self._delete_logger(logger, True)
+
+    def test_level_warning(self) -> None:
+        file = "test_level_warning.log"
+        logger = self._create_logger("test_level_warning", file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.set_log_level(LogLevel.WARNING)
+
+        # debug
+        logger.debug("DEBUG")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("DEBUG", line)
+        # info
+        logger.info("INFO")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("INFO", line)
+        # warning
+        logger.warning("WARNING")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("WARNING", line)
+        # error
+        logger.error("ERROR")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("ERROR", line)
+        # critical
+        logger.critical("CRITICAL")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("CRITICAL", line)
+
+        self._delete_logger(logger, True)
+
+    def test_level_error(self) -> None:
+        file = "test_level_error.log"
+        logger = self._create_logger("test_level_error", file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.set_log_level(LogLevel.ERROR)
+
+        # debug
+        logger.debug("DEBUG")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("DEBUG", line)
+        # info
+        logger.info("INFO")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("INFO", line)
+        # warning
+        logger.warning("WARNING")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("WARNING", line)
+        # error
+        logger.error("ERROR")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("ERROR", line)
+        # critical
+        logger.critical("CRITICAL")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("CRITICAL", line)
+
+        self._delete_logger(logger, True)
+
+    def test_level_critical(self) -> None:
+        file = "test_level_critical.log"
+        logger = self._create_logger("test_level_critical", file)
+        logger.set_format([LogFormatBlock.MESSAGE])
+        logger.set_log_level(LogLevel.CRITICAL)
+
+        # debug
+        logger.debug("DEBUG")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("DEBUG", line)
+        # info
+        logger.info("INFO")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("INFO", line)
+        # warning
+        logger.warning("WARNING")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("WARNING", line)
+        # error
+        logger.error("ERROR")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertNotEqual("ERROR", line)
+        # critical
+        logger.critical("CRITICAL")
+        line = self._read_line_of_log_file(logger._file)
+        self.assertEqual("CRITICAL", line)
+
+        self._delete_logger(logger, True)
+
+    def test_log_level_color(self) -> None:
+        color: LogColor = Logger.LogLevelToColor(LogLevel.DEBUG)
+        self.assertEqual(color, Logger.DEFAULT_DEBUG_COLOR)
+
+        color = Logger.LogLevelToColor(LogLevel.INFO)
+        self.assertEqual(color, Logger.DEFAULT_INFO_COLOR)
+
+        color = Logger.LogLevelToColor(LogLevel.WARNING)
+        self.assertEqual(color, Logger.DEFAULT_WARNING_COLOR)
+
+        color = Logger.LogLevelToColor(LogLevel.ERROR)
+        self.assertEqual(color, Logger.DEFAULT_ERROR_COLOR)
+
+        color = Logger.LogLevelToColor(LogLevel.CRITICAL)
+        self.assertEqual(color, Logger.DEFAULT_CRITICAL_COLOR)
+
+    def _create_test_format_logger(self, name) -> Logger:
         logger_name = name
         file_name = name + ".log"
         return self._create_logger(logger_name, file_name)
 
-    def test_testfile_readline_from_none(self):
+    def test_testfile_readline_from_none(self) -> None:
         line = self._read_line_of_log_file(None)
         self.assertIsNone(line)
 
-    def test_format_name(self):
+    def test_format_name(self) -> None:
         logger = self._create_test_format_logger("test_format_name")
 
         logger.set_format([LogFormatBlock.NAME])
@@ -225,7 +398,7 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_format_level(self):
+    def test_format_level(self) -> None:
         logger = self._create_test_format_logger("test_format_level")
 
         logger.set_format([LogFormatBlock.LEVEL])
@@ -252,18 +425,22 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_format_datetime(self):
+    def test_format_datetime(self) -> None:
         logger = self._create_test_format_logger("test_format_datetime")
 
         logger.set_format([LogFormatBlock.DATETIME])
         logger.debug("FORMAT: DATETIME")
         line = self._read_line_of_log_file(logger._file)
-        expected_format_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}"
-        self.assertRegex(line, expected_format_pattern)
+        self.assertIsNotNone(line)
+        if line is not None:
+            expected_format_pattern = (
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}"
+            )
+            self.assertRegex(line, expected_format_pattern)
 
         self._delete_logger(logger)
 
-    def test_format_message(self):
+    def test_format_message(self) -> None:
         logger = self._create_test_format_logger("test_format_message")
 
         logger.set_format([LogFormatBlock.MESSAGE])
@@ -274,7 +451,7 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_format_file(self):
+    def test_format_file(self) -> None:
         logger = self._create_test_format_logger("test_format_file")
 
         logger.set_format([LogFormatBlock.FILE])
@@ -284,20 +461,23 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_format_line(self):
+    def test_format_line(self) -> None:
         logger = self._create_test_format_logger("test_format_line")
 
         logger.set_format([LogFormatBlock.LINE])
 
-        frameinfo = getframeinfo(currentframe())
-        line_number = frameinfo.lineno
-        logger.debug("FORMAT: LINE")
-        line = self._read_line_of_log_file(logger._file)
-        self.assertEqual(line, str(line_number + 2))
+        c_frame: FrameType | None = currentframe()
+        self.assertIsNotNone(c_frame)
+        if c_frame is not None:
+            frameinfo: Traceback = getframeinfo(c_frame)
+            line_number = frameinfo.lineno
+            logger.debug("FORMAT: LINE")
+            line = self._read_line_of_log_file(logger._file)
+            self.assertEqual(line, str(line_number + 2))
 
         self._delete_logger(logger)
 
-    def test_format_func(self):
+    def test_format_func(self) -> None:
         logger = self._create_test_format_logger("test_format_func")
 
         logger.set_format([LogFormatBlock.FUNCTION])
@@ -307,7 +487,7 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_format_all(self):
+    def test_format_all(self) -> None:
         logger = self._create_test_format_logger("test_format_all")
 
         logger.set_format(
@@ -330,13 +510,14 @@ class TestMain(unittest.TestCase):
         )
         logger.debug("FORMAT: [NAME] [DATETIME] (FILE:LINE:FUNC) MSG")
         line = self._read_line_of_log_file(logger._file)
-        expected_pattern = r"\[([^\]]+)\] \[([^\]]+)\] \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}\] \(([^:]+\.py):(\d+):([^)]+)\) ([^$]+)"  # noqa: E501
-
-        self.assertRegex(line, expected_pattern)
+        self.assertIsNotNone(line)
+        if line is not None:
+            expected_pattern = r"\[([^\]]+)\] \[([^\]]+)\] \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}\] \(([^:]+\.py):(\d+):([^)]+)\) ([^$]+)"  # noqa: E501
+            self.assertRegex(line, expected_pattern)
 
         self._delete_logger(logger)
 
-    def test_log(self):
+    def test_log(self) -> None:
         logger = self._create_logger("log", "log.log")
         logger.set_format([LogFormatBlock.MESSAGE])
         logger.log("LOG")
@@ -345,7 +526,7 @@ class TestMain(unittest.TestCase):
 
         self._delete_logger(logger)
 
-    def test_noncolor(self):
+    def test_noncolor(self) -> None:
         logger = self._create_logger(
             "log", "log.log", color_mode=LogColorMode.MONO
         )
@@ -357,7 +538,7 @@ class TestMain(unittest.TestCase):
         self._delete_logger(logger)
 
     @parameterized.expand([(True), (False)])
-    def test_release_and_recreate(self, append: bool):
+    def test_release_and_recreate(self, append: bool) -> None:
         logger_first = self._create_logger("log_first", "log_first.log")
         logger_first.set_format([LogFormatBlock.MESSAGE])
         logger_first.log("First")
@@ -395,7 +576,9 @@ class TestMain(unittest.TestCase):
             (LogMoveOption.DELETE_AND_INIT, False),
         ]
     )
-    def test_move_file(self, option: LogMoveOption, target_has_file: bool):
+    def test_move_file(
+        self, option: LogMoveOption, target_has_file: bool
+    ) -> None:
         old_file = "log_to_move.log"
         new_file = "log_moved.log"
 
@@ -482,7 +665,7 @@ class TestMain(unittest.TestCase):
         self._delete_file(old_file)
         self._delete_file(new_file)
 
-    def test_move_none_file(self):
+    def test_move_none_file(self) -> None:
         logger = self._create_logger("logger", None)
         logger.set_format([LogFormatBlock.MESSAGE])
         logger.log("Before Move")
