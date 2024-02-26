@@ -141,10 +141,24 @@ class LogMoveOption(IntEnum):
 class Logger:
     """The infamous ugly logger class"""
 
+    # static definitions
+    DEFAULT_CONSOLE_LOG_LEVEL: LogLevel = LogLevel.DEBUG
+    DEFAULT_FILE_LOG_LEVEL: LogLevel = LogLevel.DEBUG
+    DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel.DEBUG
+
+    # TODO : implement below colors as defaults and remove this note
+    DEFAULT_DEBUG_COLOR: LogColor = LogColor.BLACK
+    DEFAULT_INFO_COLOR: LogColor = LogColor.BLUE
+    DEFAULT_WARNING_COLOR: LogColor = LogColor.YELLOW
+    DEFAULT_ERROR_COLOR: LogColor = LogColor.RED
+    DEFAULT_CRITICAL_COLOR: LogColor = LogColor.MAGENTA
+
+    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+    # variables
     _logger: logging.Logger | None = None
     _console_handler: logging.StreamHandler | None = None
     _file_handler: logging.FileHandler | None = None
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
     _format_arr: list = [
         "[",
         LogFormatBlock.NAME,
@@ -166,6 +180,8 @@ class Logger:
     _file: str | None = None
     _permanent: bool = True
     _color_mode: LogColorMode = LogColorMode.COLORED
+
+    _log_level: LogLevel = LogLevel.DEBUG
 
     def __init__(
         self,
@@ -194,6 +210,7 @@ class Logger:
         Logger.DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
         self._name = name
+        self._log_level = LogLevel.DEBUG
         self._init(file, permanent, append, color_mode)
 
     def __del__(self) -> None:
@@ -224,6 +241,9 @@ class Logger:
                     self._console_handler = handler
                 elif type(handler) is logging.FileHandler:
                     self._file_handler = handler
+                handler.setLevel(
+                    Logger.LogLevelToLoggingLevel(self._log_level)
+                )
             return
 
         self._file = file
@@ -235,18 +255,22 @@ class Logger:
         self._logger._color_mode = color_mode  # type: ignore[attr-defined]
         self.set_color_mode(color_mode)
 
-        self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(Logger.LogLevelToLoggingLevel(self._log_level))
 
         self._console_handler = logging.StreamHandler()
         self._console_handler.addFilter(self._build_handler_filter("console"))
-        self._console_handler.setLevel(logging.DEBUG)
+        self._console_handler.setLevel(
+            Logger.LogLevelToLoggingLevel(self._log_level)
+        )
         self._logger.addHandler(self._console_handler)
 
         if not (file is None or file == ""):
             file_mode: str = "a" if append else "w"
             self._file_handler = logging.FileHandler(file, file_mode, "utf-8")
             self._file_handler.addFilter(self._build_handler_filter("file"))
-            self._file_handler.setLevel(logging.DEBUG)
+            self._file_handler.setLevel(
+                Logger.LogLevelToLoggingLevel(self._log_level)
+            )
             self._logger.addHandler(self._file_handler)
 
     def release(self) -> None:
@@ -272,6 +296,40 @@ class Logger:
 
         if self._name in logging.Logger.manager.loggerDict:
             del logging.Logger.manager.loggerDict[self._name]
+
+    def set_log_level(self, level: LogLevel) -> None:
+        self._log_level = level
+        if self._logger is not None:
+            for handler in self._logger.handlers:
+                handler.setLevel(Logger.LogLevelToLoggingLevel(level))
+
+    @staticmethod
+    def LogLevelToColor(level: LogLevel) -> LogColor:
+        match level:
+            case LogLevel.DEBUG:
+                return Logger.DEFAULT_DEBUG_COLOR
+            case LogLevel.INFO:
+                return Logger.DEFAULT_INFO_COLOR
+            case LogLevel.WARNING:
+                return Logger.DEFAULT_WARNING_COLOR
+            case LogLevel.ERROR:
+                return Logger.DEFAULT_ERROR_COLOR
+            case LogLevel.CRITICAL:
+                return Logger.DEFAULT_CRITICAL_COLOR
+
+    @staticmethod
+    def LogLevelToLoggingLevel(level: LogLevel) -> int:
+        match level:
+            case LogLevel.DEBUG:
+                return logging.DEBUG
+            case LogLevel.INFO:
+                return logging.INFO
+            case LogLevel.WARNING:
+                return logging.WARN
+            case LogLevel.ERROR:
+                return logging.ERROR
+            case LogLevel.CRITICAL:
+                return logging.CRITICAL
 
     @staticmethod
     def DateTimeToStr(dt) -> str:
@@ -385,8 +443,9 @@ class Logger:
     def console_oneline(
         self,
         msg: typing.Any,
-        color: LogColor = LogColor.BLACK,
+        color: LogColor | None = None,
         console_width: int = 100,
+        level: LogLevel = DEFAULT_CONSOLE_LOG_LEVEL,
     ) -> None:
         if console_width <= 0:
             return
@@ -403,8 +462,11 @@ class Logger:
             msg_to_print = msg_str + " " * (console_width - msg_len)
 
         if self._colored == LogColorMode.COLORED:
+            c: LogColor = color
+            if c is None:
+                c = Logger.LogLevelToColor(level)
             print(
-                f"\r{self._color_str(color)}{msg_to_print}\033[0m",
+                f"\r{self._color_str(c)}{msg_to_print}\033[0m",
                 end="",
                 flush=True,
             )
@@ -419,43 +481,59 @@ class Logger:
         self,
         msg: typing.Any,
         color: LogColor | None = None,
-        level: LogLevel = LogLevel.DEBUG,
+        level: LogLevel = DEFAULT_CONSOLE_LOG_LEVEL,
     ) -> None:
         if self._logger is None:
             return  # pragma: no cover
         match level:
             case LogLevel.DEBUG:
-                d_color = color if color is not None else LogColor.BLACK
+                d_color = (
+                    color if color is not None else Logger.DEFAULT_DEBUG_COLOR
+                )
                 self._logger.debug(
                     self._colored_format(msg, d_color, LogLevel.DEBUG),
                     extra={"block": "file"},
                 )
             case LogLevel.INFO:
-                d_color = color if color is not None else LogColor.BLUE
+                d_color = (
+                    color if color is not None else Logger.DEFAULT_INFO_COLOR
+                )
                 self._logger.info(
                     self._colored_format(msg, d_color, LogLevel.INFO),
                     extra={"block": "file"},
                 )
             case LogLevel.WARNING:
-                d_color = color if color is not None else LogColor.YELLOW
+                d_color = (
+                    color
+                    if color is not None
+                    else Logger.DEFAULT_WARNING_COLOR
+                )
                 self._logger.warning(
                     self._colored_format(msg, d_color, LogLevel.WARNING),
                     extra={"block": "file"},
                 )
             case LogLevel.ERROR:
-                d_color = color if color is not None else LogColor.RED
+                d_color = (
+                    color if color is not None else Logger.DEFAULT_ERROR_COLOR
+                )
                 self._logger.error(
                     self._colored_format(msg, d_color, LogLevel.ERROR),
                     extra={"block": "file"},
                 )
             case LogLevel.CRITICAL:
-                d_color = color if color is not None else LogColor.MAGENTA
+                d_color = (
+                    color
+                    if color is not None
+                    else Logger.DEFAULT_CRITICAL_COLOR
+                )
                 self._logger.critical(
                     self._colored_format(msg, d_color, LogLevel.CRITICAL),
                     extra={"block": "file"},
                 )
 
-    def file(self, msg: typing.Any, level: LogLevel = LogLevel.DEBUG) -> None:
+    def file(
+        self, msg: typing.Any, level: LogLevel = DEFAULT_FILE_LOG_LEVEL
+    ) -> None:
         """Logs to file, but does not log to the console
 
         Args:
@@ -495,7 +573,7 @@ class Logger:
         self,
         msg: typing.Any,
         color: LogColor | None = None,
-        level: LogLevel = LogLevel.DEBUG,
+        level: LogLevel = DEFAULT_LOG_LOG_LEVEL,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs both to the file and to the console
