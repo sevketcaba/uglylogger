@@ -146,7 +146,6 @@ class Logger:
     DEFAULT_FILE_LOG_LEVEL: LogLevel = LogLevel.DEBUG
     DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
-    # TODO : implement below colors as defaults and remove this note
     DEFAULT_DEBUG_COLOR: LogColor = LogColor.BLACK
     DEFAULT_INFO_COLOR: LogColor = LogColor.BLUE
     DEFAULT_WARNING_COLOR: LogColor = LogColor.YELLOW
@@ -181,7 +180,8 @@ class Logger:
     _permanent: bool = True
     _color_mode: LogColorMode = LogColorMode.COLORED
 
-    _log_level: LogLevel = LogLevel.DEBUG
+    DEFAULT_LOG_LEVEL: LogLevel = LogLevel.DEBUG
+    _log_level: LogLevel = DEFAULT_LOG_LOG_LEVEL
 
     def __init__(
         self,
@@ -210,7 +210,7 @@ class Logger:
         Logger.DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
         self._name = name
-        self._log_level = LogLevel.DEBUG
+        self._log_level = Logger.DEFAULT_LOG_LOG_LEVEL
         self._init(file, permanent, append, color_mode)
 
     def __del__(self) -> None:
