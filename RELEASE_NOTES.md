@@ -1,3 +1,10 @@
+# v0.7.0
+
+- **[FEATURE]** Added log level functionality
+- **[FEATURE]** Added static default log levels
+- **[FEATURE]** Added static color definitions for log levels
+- **[FEATURE]** Added unit tests for new functionality
+
 # v0.6.1
 
 - **[BUMP]** setuptools : 65.5.0 -> 69.1.1
