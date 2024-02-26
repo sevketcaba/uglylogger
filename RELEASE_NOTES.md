@@ -1,3 +1,7 @@
+# v0.7.1
+
+- **[FEATURE]** Added statid default log level
+
 # v0.7.0
 
 - **[FEATURE]** Added log level functionality
