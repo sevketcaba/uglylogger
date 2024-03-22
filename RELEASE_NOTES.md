@@ -1,3 +1,5 @@
+# v0.8.1
+- **[FIX]** Removed unnecessary dependency 'parameterized'
 # v0.8.0
 - **[FEATURE]** Added LogBase as an easier way to use logger
 
