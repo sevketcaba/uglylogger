@@ -7,3 +7,4 @@ from .logger import (
     Logger,
     LogMoveOption,
 )
+from .logbase import LogBase
