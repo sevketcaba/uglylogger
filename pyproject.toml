@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uglylogger" # Required
-version = "0.8.0" # Required
+version = "0.8.1" # Required
 description = "An ugly, slow Logger class for python" # Optional
 readme = "README.md" # Optional
 requires-python = ">=3.10"
@@ -35,12 +35,8 @@ classifiers = [ # Optional
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = [ # Optional
-  "parameterized",
-]
+dependencies = [] # Optional
 [project.optional-dependencies] # Optional
-dev = ["black", "flake8", "flake8-docstrings", "mypy"]
-test = ["pytest", "pytest-cov"]
 
 [project.urls] # Optional
 "Homepage" = "https://github.com/sevketcaba/uglylogger"
