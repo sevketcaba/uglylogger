@@ -1,3 +1,6 @@
+# v0.8.0
+- **[FEATURE]** Added LogBase as an easier way to use logger
+
 # v0.7.1
 
 - **[FEATURE]** Added statid default log level

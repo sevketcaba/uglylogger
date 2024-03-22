@@ -5,9 +5,8 @@ import locale
 from datetime import datetime
 import inspect
 import os
-import typing
 import shutil
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Any
 
 
 class LogColorMode(IntEnum):
@@ -366,7 +365,7 @@ class Logger:
         color_seq = "\033[1;%dm"
         return color_seq % (30 + int(color))
 
-    def _msg_to_str(self, msg: typing.Any) -> str:
+    def _msg_to_str(self, msg: Any) -> str:
         return str(msg, "utf-8") if type(msg) is bytes else str(msg)
 
     def _get_file_line_func(self) -> Tuple[str | None, str | None, int | None]:
@@ -391,7 +390,7 @@ class Logger:
 
         return (None, None, None)  # pragma: no cover
 
-    def _format(self, msg: typing.Any, level: LogLevel) -> str:
+    def _format(self, msg: Any, level: LogLevel) -> str:
         formatted = ""
         fil = None
         fun = None
@@ -429,7 +428,7 @@ class Logger:
         return formatted
 
     def _colored_format(
-        self, msg: typing.Any, color: LogColor, level: LogLevel
+        self, msg: Any, color: LogColor, level: LogLevel
     ) -> str:
         if self._colored:
             return (
@@ -442,7 +441,7 @@ class Logger:
 
     def console_oneline(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         console_width: int = 100,
         level: LogLevel = DEFAULT_CONSOLE_LOG_LEVEL,
@@ -479,7 +478,7 @@ class Logger:
 
     def console(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         level: LogLevel = DEFAULT_CONSOLE_LOG_LEVEL,
     ) -> None:
@@ -531,13 +530,11 @@ class Logger:
                     extra={"block": "file"},
                 )
 
-    def file(
-        self, msg: typing.Any, level: LogLevel = DEFAULT_FILE_LOG_LEVEL
-    ) -> None:
+    def file(self, msg: Any, level: LogLevel = DEFAULT_FILE_LOG_LEVEL) -> None:
         """Logs to file, but does not log to the console
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             level (LogLevel, optional): Defaults to LogLevel.DEBUG.
         """
         if self._logger is None:
@@ -571,7 +568,7 @@ class Logger:
 
     def log(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         level: LogLevel = DEFAULT_LOG_LOG_LEVEL,
         output: LogOutput = LogOutput.ALL,
@@ -579,7 +576,7 @@ class Logger:
         """Logs both to the file and to the console
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor | None, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             level (LogLevel, optional): Defaults to LogLevel.DEBUG.
@@ -592,14 +589,14 @@ class Logger:
 
     def debug(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs as debug
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             output (LogOutput, optional): Log to console, file or both.
@@ -612,14 +609,14 @@ class Logger:
 
     def info(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs as info
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             output (LogOutput, optional): Log to console, file or both.
@@ -632,14 +629,14 @@ class Logger:
 
     def warning(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs as warning
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             output (LogOutput, optional): Log to console, file or both.
@@ -652,14 +649,14 @@ class Logger:
 
     def error(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs as error
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             output (LogOutput, optional): Log to console, file or both.
@@ -672,14 +669,14 @@ class Logger:
 
     def critical(
         self,
-        msg: typing.Any,
+        msg: Any,
         color: LogColor | None = None,
         output: LogOutput = LogOutput.ALL,
     ) -> None:
         """Logs as critical
 
         Args:
-            msg (typing.Any): Message to log
+            msg (Any): Message to log
             color (LogColor, optional): Color to overwrite,
                 otherwise uses color by the LogLevel. Defaults to None.
             output (LogOutput, optional): Log to console, file or both.
